@@ -40,10 +40,10 @@ export const createStripeUrl = async () => {
                 price_data: {
                     currency: "USD",
                     product_data: {
-                        name: "Lingo Clone Premium",
+                        name: "Lingo Premium",
                         description: "Get unlimited hearts and access to all features"
                     },
-                    unit_amount: 2000, // $20.00
+                    unit_amount: 500, // $5.00
                     recurring: {
                         interval: "month"
                     }

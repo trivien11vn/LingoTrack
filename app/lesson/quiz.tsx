@@ -7,7 +7,7 @@ import { Footer } from "@/app/lesson/footer";
 import { Header } from "@/app/lesson/header";
 import { QuestionBubble } from "@/app/lesson/question-bubble";
 import { ResultCard } from "@/app/lesson/result-card";
-import { challengeOptions, challenges } from "@/db/schema";
+import { challengeOptions, challenges, userSubscriptions } from "@/db/schema";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -25,7 +25,9 @@ type Props = {
         completed: boolean;
         challengeOptions: typeof challengeOptions.$inferSelect[]
     })[];
-    userSubscription: any; //todo: replace with subscription db type
+    userSubscription: (typeof userSubscriptions.$inferSelect & {
+        isActive: boolean;
+    }) | null; //todo: replace with subscription db type
 }
 
 export const Quiz = ({

@@ -1,14 +1,15 @@
-import db from "@/db/drizzle";
-import { userSubscriptions } from "@/db/schema";
-import { stripe } from "@/lib/stripe";
-import { eq } from "drizzle-orm";
-import { headers } from "next/headers"
-import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+
+import db from "@/db/drizzle";
+import { stripe } from "@/lib/stripe";
+import { userSubscriptions } from "@/db/schema";
 
 export async function POST(req: Request) {
-    const body = await req.text()
-    const signature = headers().get('Stripe-Signature') as string;
+    const body = await req.text();
+    const signature = headers().get("Stripe-Signature") as string;
 
     let event: Stripe.Event;
 
@@ -16,13 +17,12 @@ export async function POST(req: Request) {
         event = stripe.webhooks.constructEvent(
             body,
             signature,
-            process.env.STRIPE_WEBHOOK_SECRET!
-        )
-    }
-    catch (err: any) {
-        return new NextResponse(`Webhook Error: ${err.message}`, {
-            status: 400
-        })
+            process.env.STRIPE_WEBHOOK_SECRET!,
+        );
+    } catch (error: any) {
+        return new NextResponse(`Webhook error: ${error.message}`, {
+            status: 400,
+        });
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
@@ -30,42 +30,40 @@ export async function POST(req: Request) {
     if (event.type === "checkout.session.completed") {
         const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
-        )
+        );
 
         if (!session?.metadata?.userId) {
-            return new NextResponse("User ID is required", {
-                status: 400
-            })
+            return new NextResponse("User ID is required", { status: 400 });
         }
 
-        await db
-            .insert(userSubscriptions)
-            .values({
-                userId: session.metadata.userId,
-                stripeSubscriptionId: subscription.id,
-                stripeCustomerId: subscription.customer as string,
-                stripePriceId: subscription.items.data[0].price.id,
-                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000)
-            })
+        await db.insert(userSubscriptions).values({
+            // Link this subscription record back to the app user.
+            userId: session.metadata.userId,
+            // Store the Stripe subscription ID for later updates/cancellation checks.
+            stripeSubscriptionId: subscription.id,
+            // Store the Stripe customer ID so we can open the billing portal later.
+            stripeCustomerId: subscription.customer as string,
+            // Track the active Stripe price for this subscription plan.
+            stripePriceId: subscription.items.data[0].price.id,
+            // Keep the current billing period end date in sync with Stripe.
+            stripeCurrentPeriodEnd: new Date(
+                subscription.current_period_end * 1000,
+            ),
+        });
     }
 
-
-    if (event.type === 'invoice.payment_succeeded') {
+    if (event.type === "invoice.payment_succeeded") {
         const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
         );
 
-        await db
-            .update(userSubscriptions)
-            .set({
-                stripePriceId: subscription.items.data[0].price.id,
-                stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000)
-            })
-            .where(eq(
-                userSubscriptions.stripeSubscriptionId, subscription.id
-            ))
+        await db.update(userSubscriptions).set({
+            stripePriceId: subscription.items.data[0].price.id,
+            stripeCurrentPeriodEnd: new Date(
+                subscription.current_period_end * 1000,
+            ),
+        }).where(eq(userSubscriptions.stripeSubscriptionId, subscription.id))
     }
-    return new NextResponse(null, {
-        status: 200
-    })
-}
+
+    return new NextResponse(null, { status: 200 });
+};

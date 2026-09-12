@@ -1,5 +1,7 @@
 import { Items } from "@/app/(main)/shop/items"
 import { FeedWrapper } from "@/components/feed-wrapper"
+import { Promo } from "@/components/promo"
+import { Quests } from "@/components/quests"
 import { StickyWrapper } from "@/components/sticky-wrapper"
 import { UserProgress } from "@/components/user-progress"
 import { getUserProgress, getUserSubscription } from "@/db/queries"
@@ -22,6 +24,8 @@ const ShopPage = async () => {
         redirect("/courses")
     }
 
+    const isPro = !!userSubscription?.isActive
+
     return (
         <div className="flex flex-row-reverse gap-[40px] px-6">
             <StickyWrapper>
@@ -31,6 +35,10 @@ const ShopPage = async () => {
                     points={userProgress.points}
                     hasActiveSubscription={!!userSubscription?.isActive}
                 />
+                {
+                    !isPro && <Promo />
+                }
+                <Quests points={userProgress.points} />
             </StickyWrapper>
             <FeedWrapper>
                 <div className="w-full flex flex-col items-center">
